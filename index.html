@@ -414,15 +414,15 @@
     <canvas id="bgCanvas"></canvas>
     <div id="gameContainer">
         <canvas id="gameCanvas" width="500" height="700"></canvas>
-        <div id="ui">
+        <div id="ui" class="hidden">
             <div>
                 <span id="killCount">击杀: 0</span>
                 <span id="score">得分: 0</span>
             </div>
             <div id="health">❤❤❤❤❤</div>
         </div>
-        <div id="killProgress">下一道具: 10 击杀</div>
-        <div id="currentItems"></div>
+        <div id="killProgress" class="hidden">下一道具: 10 击杀</div>
+        <div id="currentItems" class="hidden"></div>
 
         <div id="menu">
             <h1>雷霆战机</h1>
@@ -737,6 +737,7 @@
                 this.keys = {};
                 this.setupEventListeners();
                 this.resetGame();
+                this.updateMenu();
             }
 
             initStars() {
@@ -856,6 +857,11 @@
                 const exitBtn = document.getElementById('exitBtn');
                 const finalScore = document.getElementById('finalScore');
                 const diffContainer = menu.querySelector('.difficulty-container');
+                
+                // 游戏运行时的 UI 元素
+                const gameUI = document.getElementById('ui');
+                const killProgress = document.getElementById('killProgress');
+                const currentItems = document.getElementById('currentItems');
 
                 if (this.state === GameState.MAIN_MENU) {
                     menu.classList.remove('hidden');
@@ -865,6 +871,11 @@
                     diffContainer.classList.remove('hidden');
                     startBtn.textContent = '开始游戏';
                     finalScore.textContent = '';
+                    
+                    // 隐藏游戏过程中的 UI
+                    gameUI.classList.add('hidden');
+                    killProgress.classList.add('hidden');
+                    currentItems.classList.add('hidden');
                     
                     // 主菜单状态
                     title.textContent = '雷霆战机';
@@ -878,6 +889,11 @@
                     startBtn.textContent = '重新开始';
                     finalScore.textContent = `最终得分: ${this.score}`;
                     
+                    // 隐藏游戏过程中的 UI
+                    gameUI.classList.add('hidden');
+                    killProgress.classList.add('hidden');
+                    currentItems.classList.add('hidden');
+                    
                     // 游戏结束状态
                     title.textContent = 'GAME OVER';
                     subtitle.style.display = 'none';
@@ -889,11 +905,20 @@
                     diffContainer.classList.add('hidden');
                     finalScore.textContent = '';
                     
+                    // 隐藏游戏过程中的 UI
+                    gameUI.classList.add('hidden');
+                    killProgress.classList.add('hidden');
+                    currentItems.classList.add('hidden');
+                    
                     // 暂停状态
                     title.textContent = 'PAUSED';
                     subtitle.style.display = 'none';
                 } else {
                     menu.classList.add('hidden');
+                    // 显示游戏过程中的 UI
+                    gameUI.classList.remove('hidden');
+                    killProgress.classList.remove('hidden');
+                    currentItems.classList.remove('hidden');
                 }
             }
 
