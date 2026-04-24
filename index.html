@@ -325,6 +325,49 @@
             box-shadow: 0 15px 40px rgba(142, 68, 173, 0.15);
         }
 
+        /* 超级稀有道具特效 */
+        .item-card.ultra-rare {
+            border: 2px solid transparent;
+            background: rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            animation: ultra-glow 3s infinite linear;
+        }
+
+        @keyframes ultra-glow {
+            0% { border-color: #ff3333; box-shadow: 0 0 10px #ff3333; }
+            33% { border-color: #9b59b6; box-shadow: 0 0 10px #9b59b6; }
+            66% { border-color: #3498db; box-shadow: 0 0 10px #3498db; }
+            100% { border-color: #ff3333; box-shadow: 0 0 10px #ff3333; }
+        }
+
+        .item-card.ultra-rare .item-name {
+            font-size: 24px;
+            font-weight: 800;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, #f1c40f, #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine-text 2s infinite linear;
+        }
+
+        @keyframes shine-text {
+            to { background-position: 200% center; }
+        }
+
+        .item-card.ultra-rare.BRIMSTONE { 
+            background: radial-gradient(circle at center, rgba(231, 76, 60, 0.2), rgba(0,0,0,0.8));
+            border-color: #e74c3c;
+        }
+        .item-card.ultra-rare.HOMING { 
+            background: radial-gradient(circle at center, rgba(155, 89, 182, 0.2), rgba(0,0,0,0.8));
+            border-color: #9b59b6;
+        }
+        .item-card.ultra-rare.TRIPLE_SHOT { 
+            background: radial-gradient(circle at center, rgba(52, 152, 219, 0.2), rgba(0,0,0,0.8));
+            border-color: #3498db;
+        }
+
         .item-icon {
             font-size: 64px; /* 再次放大图标 */
             margin-bottom: 20px;
@@ -393,11 +436,13 @@
 
             <button id="startBtn">开始游戏</button>
             <button id="resumeBtn" class="hidden">继续游戏</button>
+            <button id="exitBtn">退出游戏</button>
             <div id="finalScore"></div>
             <div id="controls">
                 WASD - 移动战机<br>
                 自动发射子弹<br>
-                ESC - 暂停游戏
+                ESC - 暂停游戏<br>
+                <span style="color: #e74c3c; font-weight: bold;">注意：未击毁的敌机逃脱后会撞击母舰扣除血量！</span>
             </div>
         </div>
 
@@ -758,6 +803,14 @@
                     this.accumulator = 0;
                     this.gameLoop(this.lastTime);
                 });
+
+                document.getElementById('exitBtn').addEventListener('click', () => {
+                    if (confirm('确定要退出游戏返回主菜单吗？')) {
+                        if (this.animationId) cancelAnimationFrame(this.animationId);
+                        this.state = GameState.MAIN_MENU;
+                        this.updateMenu();
+                    }
+                });
             }
 
             resetGame() {
@@ -800,6 +853,7 @@
                 const subtitle = menu.querySelector('h2');
                 const startBtn = document.getElementById('startBtn');
                 const resumeBtn = document.getElementById('resumeBtn');
+                const exitBtn = document.getElementById('exitBtn');
                 const finalScore = document.getElementById('finalScore');
                 const diffContainer = menu.querySelector('.difficulty-container');
 
@@ -807,6 +861,7 @@
                     menu.classList.remove('hidden');
                     startBtn.classList.remove('hidden');
                     resumeBtn.classList.add('hidden');
+                    exitBtn.classList.add('hidden');
                     diffContainer.classList.remove('hidden');
                     startBtn.textContent = '开始游戏';
                     finalScore.textContent = '';
@@ -818,6 +873,7 @@
                     menu.classList.remove('hidden');
                     startBtn.classList.remove('hidden');
                     resumeBtn.classList.add('hidden');
+                    exitBtn.classList.remove('hidden');
                     diffContainer.classList.remove('hidden');
                     startBtn.textContent = '重新开始';
                     finalScore.textContent = `最终得分: ${this.score}`;
@@ -829,6 +885,7 @@
                     menu.classList.remove('hidden');
                     startBtn.classList.add('hidden');
                     resumeBtn.classList.remove('hidden');
+                    exitBtn.classList.remove('hidden');
                     diffContainer.classList.add('hidden');
                     finalScore.textContent = '';
                     
@@ -889,7 +946,9 @@
 
                 options.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = `item-card ${item.rarity}`;
+                    // 检查是否为超级稀有道具
+                    const isUltraRare = ['BRIMSTONE', 'HOMING', 'TRIPLE_SHOT'].includes(item.id);
+                    card.className = `item-card ${item.rarity} ${isUltraRare ? 'ultra-rare ' + item.id : ''}`;
                     card.innerHTML = `
                         <div class="item-icon">${item.icon}</div>
                         <div class="item-name">${item.name}</div>
