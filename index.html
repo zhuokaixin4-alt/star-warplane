@@ -686,6 +686,8 @@
                 this.spawnRate = CONFIG.baseSpawnRate;
                 this.itemTriggered = false;
                 this.difficulty = 'hard';
+                this.lastTime = 0;
+                this.accumulator = 0;
 
                 this.keys = {};
                 this.setupEventListeners();
@@ -744,12 +746,17 @@
                     this.resetGame();
                     this.state = GameState.PLAYING;
                     this.updateMenu();
-                    this.gameLoop();
+                    this.lastTime = performance.now();
+                    this.accumulator = 0;
+                    this.gameLoop(this.lastTime);
                 });
 
                 document.getElementById('resumeBtn').addEventListener('click', () => {
                     this.state = GameState.PLAYING;
                     this.updateMenu();
+                    this.lastTime = performance.now();
+                    this.accumulator = 0;
+                    this.gameLoop(this.lastTime);
                 });
             }
 
@@ -853,20 +860,23 @@
                 const itemCount = this.player.items ? this.player.items.length : 0;
 
                 for (let i = 0; i < 3; i++) {
-                    // 如果是第一次选择，且第一个位置，则强制出硫磺火
-                    if (itemCount === 0 && i === 0) {
-                        options.push(ITEMS.brimstone);
-                        continue;
-                    }
-                    // 如果是第二次选择，且第一个位置，则强制出弯曲勺子
-                    if (itemCount === 1 && i === 0) {
-                        options.push(ITEMS.homing);
-                        continue;
-                    }
-                    // 如果是第三次选择，且第一个位置，则强制出内眼
-                    if (itemCount === 2 && i === 0) {
-                        options.push(ITEMS.tripleShot);
-                        continue;
+                    // 仅在“容易”模式下固定产出前三次道具
+                    if (this.difficulty === 'easy') {
+                        // 如果是第一次选择，且第一个位置，则强制出硫磺火
+                        if (itemCount === 0 && i === 0) {
+                            options.push(ITEMS.brimstone);
+                            continue;
+                        }
+                        // 如果是第二次选择，且第一个位置，则强制出弯曲勺子
+                        if (itemCount === 1 && i === 0) {
+                            options.push(ITEMS.homing);
+                            continue;
+                        }
+                        // 如果是第三次选择，且第一个位置，则强制出内眼
+                        if (itemCount === 2 && i === 0) {
+                            options.push(ITEMS.tripleShot);
+                            continue;
+                        }
                     }
 
                     const isRare = Math.random() < 0.3; // 30% 概率稀有道具
@@ -1819,12 +1829,25 @@
                 document.getElementById('health').textContent = hearts || '💔';
             }
 
-            gameLoop() {
+            gameLoop(timestamp) {
                 if (this.state === GameState.MAIN_MENU || this.state === GameState.GAME_OVER) return;
 
-                this.update();
+                if (!this.lastTime) this.lastTime = timestamp;
+                const elapsed = timestamp - this.lastTime;
+                this.lastTime = timestamp;
+
+                // 累积时间
+                this.accumulator += elapsed;
+
+                // 固定步长更新 (约 60 FPS)
+                const fixedDeltaTime = 1000 / 60;
+                while (this.accumulator >= fixedDeltaTime) {
+                    this.update();
+                    this.accumulator -= fixedDeltaTime;
+                }
+
                 this.render();
-                this.animationId = requestAnimationFrame(() => this.gameLoop());
+                this.animationId = requestAnimationFrame((t) => this.gameLoop(t));
             }
         }
 
@@ -1840,7 +1863,9 @@
                 this.stars = [];
                 this.resize();
                 this.initStars();
-                this.animate();
+                this.lastTime = performance.now();
+                this.accumulator = 0;
+                this.animate(this.lastTime);
 
                 window.addEventListener('resize', () => this.resize());
             }
@@ -1865,11 +1890,22 @@
                 }
             }
 
-            animate() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.fillStyle = '#0b0b10'; // 背景色
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            animate(timestamp) {
+                const elapsed = timestamp - this.lastTime;
+                this.lastTime = timestamp;
+                this.accumulator += elapsed;
 
+                const fixedDeltaTime = 1000 / 60;
+                while (this.accumulator >= fixedDeltaTime) {
+                    this.updateStars();
+                    this.accumulator -= fixedDeltaTime;
+                }
+
+                this.render();
+                requestAnimationFrame((t) => this.animate(t));
+            }
+
+            updateStars() {
                 this.stars.forEach(star => {
                     star.y += star.speed;
                     if (star.y > this.canvas.height) {
@@ -1880,7 +1916,15 @@
                     // 闪烁
                     star.opacity += Math.sin(Date.now() * star.twinkleSpeed) * 0.005;
                     star.opacity = Math.max(0.1, Math.min(0.6, star.opacity));
+                });
+            }
 
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillStyle = '#0b0b10'; // 背景色
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                this.stars.forEach(star => {
                     this.ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
                     this.ctx.beginPath();
                     // 菱形星星
@@ -1890,8 +1934,6 @@
                     this.ctx.lineTo(star.x - star.size, star.y);
                     this.ctx.fill();
                 });
-
-                requestAnimationFrame(() => this.animate());
             }
         }
 
