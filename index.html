@@ -221,6 +221,21 @@
             border-color: var(--accent-gold) !important;
         }
 
+        #musicToggle {
+            background: rgba(46, 204, 113, 0.2) !important;
+            border-color: #2ecc71 !important;
+            color: #2ecc71 !important;
+            font-size: 16px !important;
+            min-width: 200px !important;
+            padding: 10px 20px !important;
+            margin-top: 10px !important;
+        }
+
+        #musicToggle:hover {
+            background: #2ecc71 !important;
+            color: #fff !important;
+        }
+
         #finalScore {
             color: var(--accent-gold);
             font-family: 'Montserrat', sans-serif; /* 改为清晰字体 */
@@ -413,6 +428,11 @@
 <body>
     <canvas id="bgCanvas"></canvas>
     <div id="gameContainer">
+        <!-- 背景音乐 -->
+        <audio id="bgm" loop preload="auto">
+            <source src="music/83782.mp3" type="audio/mpeg">
+        </audio>
+        
         <canvas id="gameCanvas" width="500" height="700"></canvas>
         <div id="ui" class="hidden">
             <div>
@@ -437,6 +457,7 @@
             <button id="startBtn">开始游戏</button>
             <button id="resumeBtn" class="hidden">继续游戏</button>
             <button id="exitBtn">退出游戏</button>
+            <button id="musicToggle">音乐: 开启</button>
             <div id="finalScore"></div>
             <div id="controls">
                 WASD - 移动战机<br>
@@ -734,6 +755,19 @@
                 this.lastTime = 0;
                 this.accumulator = 0;
 
+                // 音乐控制
+                this.bgm = document.getElementById('bgm');
+                this.musicEnabled = true;
+                
+                // 设置初始音量
+                this.bgm.volume = 0.5;
+
+                // 监听加载错误
+                this.bgm.addEventListener('error', (e) => {
+                    console.error('BGM loading error:', e);
+                    document.getElementById('musicToggle').textContent = '音乐: 加载失败';
+                });
+
                 this.keys = {};
                 this.setupEventListeners();
                 this.resetGame();
@@ -785,6 +819,23 @@
                     });
                 });
 
+                document.getElementById('musicToggle').addEventListener('click', () => {
+                    this.musicEnabled = !this.musicEnabled;
+                    if (this.musicEnabled) {
+                        document.getElementById('musicToggle').textContent = '音乐: 开启';
+                        const playPromise = this.bgm.play();
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                console.log('Autoplay prevented or error:', error);
+                                document.getElementById('musicToggle').textContent = '音乐: 播放失败';
+                            });
+                        }
+                    } else {
+                        document.getElementById('musicToggle').textContent = '音乐: 关闭';
+                        this.bgm.pause();
+                    }
+                });
+
                 document.getElementById('startBtn').addEventListener('click', () => {
                     if (this.animationId) {
                         cancelAnimationFrame(this.animationId);
@@ -792,6 +843,12 @@
                     this.resetGame();
                     this.state = GameState.PLAYING;
                     this.updateMenu();
+                    if (this.musicEnabled) {
+                        this.bgm.play().catch(e => {
+                            console.log('BGM play failed on start:', e);
+                            // 失败通常是因为用户未交互，这里点击了按钮应该不会失败
+                        });
+                    }
                     this.lastTime = performance.now();
                     this.accumulator = 0;
                     this.gameLoop(this.lastTime);
@@ -800,6 +857,9 @@
                 document.getElementById('resumeBtn').addEventListener('click', () => {
                     this.state = GameState.PLAYING;
                     this.updateMenu();
+                    if (this.musicEnabled) {
+                        this.bgm.play().catch(e => console.log('BGM play failed on resume:', e));
+                    }
                     this.lastTime = performance.now();
                     this.accumulator = 0;
                     this.gameLoop(this.lastTime);
@@ -808,6 +868,7 @@
                 document.getElementById('exitBtn').addEventListener('click', () => {
                     if (confirm('确定要退出游戏返回主菜单吗？')) {
                         if (this.animationId) cancelAnimationFrame(this.animationId);
+                        this.bgm.pause();
                         this.state = GameState.MAIN_MENU;
                         this.updateMenu();
                     }
@@ -842,8 +903,10 @@
             togglePause() {
                 if (this.state === GameState.PLAYING) {
                     this.state = GameState.PAUSED;
+                    this.bgm.pause();
                 } else if (this.state === GameState.PAUSED) {
                     this.state = GameState.PLAYING;
+                    if (this.musicEnabled) this.bgm.play().catch(e => console.log('BGM play failed on togglePause:', e));
                 }
                 this.updateMenu();
             }
@@ -1113,6 +1176,7 @@
                         this.createHitEffect(this.player.x, this.player.y);
                         if (this.player.health <= 0) {
                             this.state = GameState.GAME_OVER;
+                            this.bgm.pause();
                             this.updateMenu();
                         }
                         return false;
@@ -1304,6 +1368,7 @@
 
                         if (this.player.health <= 0) {
                             this.state = GameState.GAME_OVER;
+                            this.bgm.pause();
                             this.updateMenu();
                         }
 
@@ -1320,6 +1385,7 @@
 
                         if (this.player.health <= 0) {
                             this.state = GameState.GAME_OVER;
+                            this.bgm.pause();
                             this.updateMenu();
                         }
                     }
